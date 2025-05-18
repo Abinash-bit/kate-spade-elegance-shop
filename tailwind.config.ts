@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,13 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				katespade: {
+					pink: '#F6A1A5',
+					mint: '#85D1D2',
+					yellow: '#F0CC4D',
+					black: '#000000',
+					white: '#FFFFFF',
 				}
 			},
 			borderRadius: {
