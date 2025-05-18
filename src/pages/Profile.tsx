@@ -8,15 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { fetchUserProfile } from "@/utils/api";
 
 const Profile = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<{
+    email?: string;
     dob: string | null;
     gender: string | null;
   }>({
+    email: undefined,
     dob: null,
     gender: null,
   });
@@ -32,8 +35,61 @@ const Profile = () => {
       return;
     }
 
-    // You would normally fetch existing profile data here
-    setLoading(false);
+    const loadProfileData = async () => {
+      try {
+        // First check if we have a cached profile
+        const cachedProfile = localStorage.getItem("userProfile");
+        
+        if (cachedProfile) {
+          const parsedProfile = JSON.parse(cachedProfile);
+          setProfile({
+            email: parsedProfile.email,
+            dob: parsedProfile.dob,
+            gender: parsedProfile.gender
+          });
+          
+          // Pre-fill the form fields if we have data
+          if (parsedProfile.dob) {
+            setInputDob(parsedProfile.dob);
+          }
+          if (parsedProfile.gender) {
+            setInputGender(parsedProfile.gender);
+          }
+        } else {
+          // If no cached profile, try to fetch from API
+          try {
+            const fetchedProfile = await fetchUserProfile(token);
+            if (fetchedProfile.dob || fetchedProfile.gender) {
+              setProfile({
+                email: fetchedProfile.email || undefined,
+                dob: fetchedProfile.dob || null,
+                gender: fetchedProfile.gender || null
+              });
+              
+              // Store profile data in localStorage
+              localStorage.setItem("userProfile", JSON.stringify(fetchedProfile));
+              
+              // Pre-fill the form fields if we have data
+              if (fetchedProfile.dob) {
+                setInputDob(fetchedProfile.dob);
+              }
+              if (fetchedProfile.gender) {
+                setInputGender(fetchedProfile.gender);
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching profile from API:", error);
+            // If API call fails, we continue without the profile data
+          }
+        }
+      } catch (error) {
+        console.error("Error loading profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfileData();
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,10 +131,20 @@ const Profile = () => {
 
       const data = await response.json();
       
+      // Update profile state
       setProfile({
+        ...profile,
         dob: data.dob,
         gender: data.gender
       });
+
+      // Update localStorage cache
+      const existingProfile = localStorage.getItem("userProfile");
+      const updatedProfile = existingProfile 
+        ? { ...JSON.parse(existingProfile), dob: data.dob, gender: data.gender }
+        : { dob: data.dob, gender: data.gender };
+      
+      localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
 
       toast.success("Profile updated successfully");
     } catch (err) {
@@ -92,8 +158,15 @@ const Profile = () => {
   const formatDisplayDate = (dateStr: string | null) => {
     if (!dateStr) return "Not set";
     
-    // The API returns the date in DD-MM-YYYY format
+    // Try to format the date consistently
     try {
+      // Check if date is in ISO format (YYYY-MM-DD)
+      if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const date = new Date(dateStr);
+        return format(date, "MMMM d, yyyy");
+      }
+      
+      // If in DD-MM-YYYY format
       const parts = dateStr.split("-");
       if (parts.length === 3) {
         // Use format from date-fns for consistency 
@@ -105,6 +178,23 @@ const Profile = () => {
       return dateStr;
     }
   };
+
+  // Update the Header component to clear localStorage on logout
+  useEffect(() => {
+    const clearProfileOnLogout = () => {
+      // Listen for logout events
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === "token" && e.newValue === null) {
+          localStorage.removeItem("userProfile");
+        }
+      };
+      
+      window.addEventListener("storage", handleStorageChange);
+      return () => window.removeEventListener("storage", handleStorageChange);
+    };
+    
+    clearProfileOnLogout();
+  }, []);
 
   if (loading) {
     return (
@@ -128,10 +218,16 @@ const Profile = () => {
             <h1 className="text-3xl font-bold mb-2">My Profile</h1>
             <p className="text-gray-600 mb-8">Update your personal information</p>
             
-            {profile.dob || profile.gender ? (
+            {(profile.email || profile.dob || profile.gender) ? (
               <div className="mb-8 bg-white rounded-lg shadow p-6">
                 <h2 className="text-xl font-medium mb-4">Current Profile</h2>
                 <div className="space-y-3">
+                  {profile.email && (
+                    <div className="flex">
+                      <span className="font-medium w-32">Email:</span>
+                      <span>{profile.email}</span>
+                    </div>
+                  )}
                   <div className="flex">
                     <span className="font-medium w-32">Date of Birth:</span>
                     <span>{formatDisplayDate(profile.dob)}</span>

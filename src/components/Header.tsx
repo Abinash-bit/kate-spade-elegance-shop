@@ -25,11 +25,15 @@ const Header = () => {
   ];
 
   const handleLogout = () => {
+    // Clear both token and user profile from localStorage
     localStorage.removeItem("token");
+    localStorage.removeItem("userProfile");
+    
     toast({
       title: "Logged out successfully",
       description: "You have been logged out of your account",
     });
+    
     // Force refresh to update login state
     window.location.href = "/";
   };

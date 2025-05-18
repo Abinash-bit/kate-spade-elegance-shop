@@ -5,6 +5,7 @@ import Layout from "@/components/Layout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { fetchUserProfile } from "@/utils/api";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -47,6 +48,19 @@ const Login = () => {
 
       // Save token to localStorage
       localStorage.setItem("token", data.access_token);
+      
+      // Fetch user profile data after successful login
+      try {
+        const profileData = await fetchUserProfile(data.access_token);
+        if (profileData.dob && profileData.gender) {
+          // Store profile data in localStorage
+          localStorage.setItem("userProfile", JSON.stringify(profileData));
+          toast.success(profileData.message || "Welcome back!");
+        }
+      } catch (profileError) {
+        // If profile fetch fails, we still continue with login
+        console.error("Error fetching profile:", profileError);
+      }
       
       toast.success("Logged in successfully");
       navigate("/profile");
