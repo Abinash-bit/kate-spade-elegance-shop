@@ -31,7 +31,7 @@ const Signup = () => {
 
     try {
       setLoading(true);
-      const response = await fetch("https://8c51-122-172-10-42.ngrok-free.app/signup", {
+      const response = await fetch("http://localhost:8000/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

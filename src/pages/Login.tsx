@@ -32,7 +32,7 @@ const Login = () => {
       formData.append("username", email);
       formData.append("password", password);
 
-      const response = await fetch("https://8c51-122-172-10-42.ngrok-free.app/token", {
+      const response = await fetch("http://localhost:8000/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
