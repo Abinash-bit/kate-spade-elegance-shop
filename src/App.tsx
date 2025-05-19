@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +8,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Profile from "./pages/Profile";
 import CategoryPage from "./pages/CategoryPage";
+import CustomizeAI from "./pages/CustomizeAI";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +25,7 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/category/:categoryId" element={<CategoryPage />} />
+          <Route path="/customize-ai" element={<CustomizeAI />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
