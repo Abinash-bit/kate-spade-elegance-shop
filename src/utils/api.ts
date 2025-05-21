@@ -1,9 +1,16 @@
-
 interface ProfileResponse {
   message?: string;
   email?: string;
   dob?: string;
   gender?: string;
+  profile_picture?: string;
+  recommended_products?: {
+    wallet?: string[];
+    jewellery?: string[];
+    clothing?: string[];
+    handbag?: string[];
+    watch?: string[];
+  };
 }
 
 export const fetchUserProfile = async (token: string): Promise<ProfileResponse> => {

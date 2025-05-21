@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -93,7 +92,7 @@ const Homepage = () => {
                 <Button size="lg" className="bg-katespade-pink hover:bg-opacity-90">
                   Shop Now
                 </Button>
-                <Button size="lg" variant="outline" className="text-white border-white hover:bg-white/20">
+                <Button size="lg" className="bg-katespade-pink text-white hover:bg-opacity-90">
                   Explore Collections
                 </Button>
               </div>

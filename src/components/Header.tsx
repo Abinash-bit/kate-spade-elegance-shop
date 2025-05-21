@@ -21,6 +21,7 @@ const Header = () => {
     { name: "Watches", path: "/category/watches" },
     { name: "Jewellery", path: "/category/jewellery" },
     { name: "Clothing", path: "/category/clothing" },
+    { name: "Virtual Try-On", path: "/virtual-try-on" },
   ];
 
   const handleLogout = () => {
@@ -61,16 +62,6 @@ const Header = () => {
                 {category.name}
               </Link>
             ))}
-            <Link
-              to="/customize-ai"
-              className={`text-base font-medium hover:text-katespade-pink transition-colors ${
-                location.pathname === "/customize-ai"
-                  ? "text-katespade-pink"
-                  : "text-gray-700"
-              }`}
-            >
-              Customize with AI
-            </Link>
           </nav>
 
           {/* User actions */}
@@ -129,13 +120,6 @@ const Header = () => {
                 {category.name}
               </Link>
             ))}
-            <Link
-              to="/customize-ai"
-              className="block py-2 px-4 text-base hover:bg-gray-50"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Customize with AI
-            </Link>
             
             <div className="pt-2 border-t border-gray-100">
               {token ? (

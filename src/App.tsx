@@ -8,7 +8,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Profile from "./pages/Profile";
 import CategoryPage from "./pages/CategoryPage";
-import CustomizeAI from "./pages/CustomizeAI";
+import VirtualTryOn from "./pages/VirtualTryOn";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,7 +25,7 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/category/:categoryId" element={<CategoryPage />} />
-          <Route path="/customize-ai" element={<CustomizeAI />} />
+          <Route path="/virtual-try-on" element={<VirtualTryOn />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

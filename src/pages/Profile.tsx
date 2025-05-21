@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -18,14 +17,17 @@ const Profile = () => {
     email?: string;
     dob: string | null;
     gender: string | null;
+    profile_picture?: string | null;
   }>({
     email: undefined,
     dob: null,
     gender: null,
+    profile_picture: null,
   });
 
   const [inputDob, setInputDob] = useState("");
   const [inputGender, setInputGender] = useState("");
+  const [inputProfilePicture, setInputProfilePicture] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -45,7 +47,8 @@ const Profile = () => {
           setProfile({
             email: parsedProfile.email,
             dob: parsedProfile.dob,
-            gender: parsedProfile.gender
+            gender: parsedProfile.gender,
+            profile_picture: parsedProfile.profile_picture
           });
           
           // Pre-fill the form fields if we have data
@@ -55,15 +58,19 @@ const Profile = () => {
           if (parsedProfile.gender) {
             setInputGender(parsedProfile.gender);
           }
+          if (parsedProfile.profile_picture) {
+            setInputProfilePicture(parsedProfile.profile_picture);
+          }
         } else {
           // If no cached profile, try to fetch from API
           try {
             const fetchedProfile = await fetchUserProfile(token);
-            if (fetchedProfile.dob || fetchedProfile.gender) {
+            if (fetchedProfile.dob || fetchedProfile.gender || fetchedProfile.profile_picture) {
               setProfile({
                 email: fetchedProfile.email || undefined,
                 dob: fetchedProfile.dob || null,
-                gender: fetchedProfile.gender || null
+                gender: fetchedProfile.gender || null,
+                profile_picture: fetchedProfile.profile_picture || null
               });
               
               // Store profile data in localStorage
@@ -75,6 +82,9 @@ const Profile = () => {
               }
               if (fetchedProfile.gender) {
                 setInputGender(fetchedProfile.gender);
+              }
+              if (fetchedProfile.profile_picture) {
+                setInputProfilePicture(fetchedProfile.profile_picture);
               }
             }
           } catch (error) {
@@ -121,7 +131,8 @@ const Profile = () => {
         },
         body: JSON.stringify({
           dob: inputDob,
-          gender: inputGender
+          gender: inputGender,
+          profile_picture: inputProfilePicture
         }),
       });
 
@@ -135,14 +146,15 @@ const Profile = () => {
       setProfile({
         ...profile,
         dob: data.dob,
-        gender: data.gender
+        gender: data.gender,
+        profile_picture: data.profile_picture
       });
 
       // Update localStorage cache
       const existingProfile = localStorage.getItem("userProfile");
       const updatedProfile = existingProfile 
-        ? { ...JSON.parse(existingProfile), dob: data.dob, gender: data.gender }
-        : { dob: data.dob, gender: data.gender };
+        ? { ...JSON.parse(existingProfile), dob: data.dob, gender: data.gender, profile_picture: data.profile_picture }
+        : { dob: data.dob, gender: data.gender, profile_picture: data.profile_picture };
       
       localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
 
@@ -218,10 +230,19 @@ const Profile = () => {
             <h1 className="text-3xl font-bold mb-2">My Profile</h1>
             <p className="text-gray-600 mb-8">Update your personal information</p>
             
-            {(profile.email || profile.dob || profile.gender) ? (
+            {(profile.email || profile.dob || profile.gender || profile.profile_picture) ? (
               <div className="mb-8 bg-white rounded-lg shadow p-6">
                 <h2 className="text-xl font-medium mb-4">Current Profile</h2>
                 <div className="space-y-3">
+                  {profile.profile_picture && (
+                    <div className="flex flex-col items-center mb-4">
+                      <img 
+                        src={profile.profile_picture} 
+                        alt="Profile" 
+                        className="w-32 h-32 object-cover rounded-full mb-2"
+                      />
+                    </div>
+                  )}
                   {profile.email && (
                     <div className="flex">
                       <span className="font-medium w-32">Email:</span>
@@ -274,6 +295,32 @@ const Profile = () => {
                           <SelectItem value="prefer not to say">Prefer not to say</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="profile_picture" className="block text-sm font-medium mb-2">
+                        Profile Picture URL
+                      </label>
+                      <Input
+                        id="profile_picture"
+                        type="text"
+                        value={inputProfilePicture}
+                        onChange={(e) => setInputProfilePicture(e.target.value)}
+                        placeholder="Enter image URL"
+                        className="w-full"
+                      />
+                      {inputProfilePicture && (
+                        <div className="mt-2">
+                          <img 
+                            src={inputProfilePicture} 
+                            alt="Preview" 
+                            className="w-20 h-20 object-cover rounded-full"
+                            onError={(e) => {
+                              e.currentTarget.src = "https://via.placeholder.com/150?text=Invalid+URL";
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                     
                     <Button 
