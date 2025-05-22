@@ -34,7 +34,7 @@ const VirtualTryOn = () => {
     setLoading(true);
     setResultImage(null);
     try {
-      const apiUrl = "https://e284-34-55-132-208.ngrok-free.app/fashion-face-swap/";
+      const apiUrl = "https://803f-34-55-132-208.ngrok-free.app/fashion-face-swap/";
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
