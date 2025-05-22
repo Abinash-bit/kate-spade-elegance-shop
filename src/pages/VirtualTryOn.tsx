@@ -34,7 +34,7 @@ const VirtualTryOn = () => {
     setLoading(true);
     setResultImage(null);
     try {
-      const apiUrl = "http://34.55.132.208:5301/fashion-face-swap/";
+      const apiUrl = "https://e284-34-55-132-208.ngrok-free.app/fashion-face-swap/";
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -47,16 +47,15 @@ const VirtualTryOn = () => {
         })
       });
       if (!response.ok) throw new Error("API request failed");
-      const data = await response.json();
-      if (data.output_url) {
-        setResultImage(data.output_url);
-      } else if (data.output_base64) {
-        setResultImage(`data:image/png;base64,${data.output_base64}`);
-      } else {
-        throw new Error("No image returned from API");
-      }
+
+      // Read the response as a Blob (image)
+      const blob = await response.blob();
+      const imageUrl = URL.createObjectURL(blob);
+      setResultImage(imageUrl);
+
       toast.success("Virtual try-on generated successfully");
     } catch (error) {
+      console.error("Error:", error);
       toast.error("Failed to generate virtual try-on");
     } finally {
       setLoading(false);
