@@ -136,7 +136,17 @@ const CategoryPage = () => {
             console.log("Processing URL:", garmentUrl);
             
             try {
-              const apiUrl = "https://803f-34-55-132-208.ngrok-free.app/fashion-face-swap/";
+              const apiUrl = "https://a14b-34-55-132-208.ngrok-free.app/fashion-face-swap/";
+              
+              // Map category to correct garment type
+              const garmentTypeMap: { [key: string]: string } = {
+                handbags: "handbags",
+                wallets: "wallet",
+                watches: "watch",
+                jewellery: "jewellery",
+                clothing: "clothing"
+              };
+
               const response = await fetch(apiUrl, {
                 method: "POST",
                 headers: {
@@ -145,7 +155,8 @@ const CategoryPage = () => {
                 },
                 body: JSON.stringify({
                   garment_url: garmentUrl,
-                  model_face_url: modelImage
+                  model_face_url: modelImage,
+                  garment_type: garmentTypeMap[categoryId] || categoryId
                 })
               });
 
