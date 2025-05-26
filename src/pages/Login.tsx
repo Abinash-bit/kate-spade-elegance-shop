@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -31,7 +32,7 @@ const Login = () => {
       formData.append("username", email);
       formData.append("password", password);
 
-      const response = await fetch("https://ca91-106-212-8-154.ngrok-free.app/token", {
+      const response = await fetch("http://localhost:8000/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",

@@ -123,7 +123,7 @@ const Profile = () => {
 
     try {
       setSaving(true);
-      const response = await fetch("https://ca91-106-212-8-154.ngrok-free.app/profile", {
+      const response = await fetch("http://localhost:8000/profile", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

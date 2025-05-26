@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -30,7 +31,7 @@ const Signup = () => {
 
     try {
       setLoading(true);
-      const response = await fetch("https://ca91-106-212-8-154.ngrok-free.app/signup", {
+      const response = await fetch("http://localhost:8000/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
