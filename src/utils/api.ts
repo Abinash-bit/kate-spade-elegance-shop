@@ -15,7 +15,7 @@ interface ProfileResponse {
 
 export const fetchUserProfile = async (token: string): Promise<ProfileResponse> => {
   try {
-    const response = await fetch("http://localhost:8000/me", {
+    const response = await fetch("https://ca91-106-212-8-154.ngrok-free.app/me", {
       method: "GET",
       headers: {
         "accept": "application/json",
