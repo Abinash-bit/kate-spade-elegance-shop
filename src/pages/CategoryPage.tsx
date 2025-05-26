@@ -52,10 +52,65 @@ const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const [recommendedProducts, setRecommendedProducts] = useState<RecommendedProducts | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [modelImage, setModelImage] = useState<string | null>(null); // State for model image
-  const [tryOnResults, setTryOnResults] = useState<{ [key: string]: string }>({}); // State for try-on results
-  const [loadingTryOns, setLoadingTryOns] = useState(false); // State for loading try-on images
-  const [selectedImage, setSelectedImage] = useState<string | null>(null); // State for enlarged image view
+  const [modelImage, setModelImage] = useState<string | null>(null);
+  const [tryOnResults, setTryOnResults] = useState<{ [key: string]: string }>({});
+  const [loadingTryOns, setLoadingTryOns] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // Function to store try-on results with timestamp
+  const storeTryOnResults = (category: string, results: { [key: string]: string }) => {
+    const storageKey = `tryOnResults_${category}`;
+    const dataToStore = {
+      results,
+      timestamp: Date.now(),
+      modelImage // Store the model image used for generation
+    };
+    localStorage.setItem(storageKey, JSON.stringify(dataToStore));
+  };
+
+  // Function to get stored try-on results
+  const getStoredTryOnResults = (category: string) => {
+    const storageKey = `tryOnResults_${category}`;
+    const storedData = localStorage.getItem(storageKey);
+    console.log("Raw stored data for", category, ":", storedData);
+    
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        console.log("Parsed stored data:", parsedData);
+        
+        // Check if we have the correct data structure
+        if (parsedData.results && parsedData.modelImage) {
+          console.log("Current model image:", modelImage);
+          console.log("Stored model image:", parsedData.modelImage);
+          
+          // Check if the stored model image matches current model image
+          if (parsedData.modelImage === modelImage) {
+            console.log("Model images match, returning stored results");
+            return parsedData.results;
+          } else {
+            console.log("Model images don't match, will regenerate");
+          }
+        } else {
+          console.log("Invalid stored data structure");
+        }
+      } catch (error) {
+        console.error("Error parsing stored try-on results:", error);
+      }
+    } else {
+      console.log("No stored data found for category:", category);
+    }
+    return null;
+  };
+
+  // Function to clear all try-on results
+  const clearAllTryOnResults = () => {
+    const categories = ['handbags', 'wallets', 'watches', 'jewellery', 'clothing'];
+    categories.forEach(category => {
+      localStorage.removeItem(`tryOnResults_${category}`);
+    });
+    setTryOnResults({});
+  };
 
   const categoryName = categoryId ? categoryId.charAt(0).toUpperCase() + categoryId.slice(1) : "";
   const products = categoryId ? (productsByCategory[categoryId as keyof typeof productsByCategory] || []) : [];
@@ -78,34 +133,16 @@ const CategoryPage = () => {
         console.error("Error parsing user profile:", error);
       }
     }
-
-    // Load try-on results from localStorage if they exist
-    const storedTryOnResults = localStorage.getItem(`tryOnResults_${categoryId}`);
-    console.log("Stored results in localStorage for category:", categoryId, storedTryOnResults);
-    if (storedTryOnResults) {
-      try {
-        const parsedResults = JSON.parse(storedTryOnResults);
-        console.log("Parsed results for category:", categoryId, parsedResults);
-        setTryOnResults(parsedResults);
-      } catch (error) {
-        console.error("Error parsing stored try-on results:", error);
-      }
-    }
-  }, [categoryId]); // Add categoryId as dependency
+  }, []);
 
   // Effect to clear try-on results when user logs out
   useEffect(() => {
     if (!isLoggedIn) {
-      // Clear all category results
-      const categories = ['handbags', 'wallets', 'watches', 'jewellery', 'clothing'];
-      categories.forEach(category => {
-        localStorage.removeItem(`tryOnResults_${category}`);
-      });
-      setTryOnResults({});
+      clearAllTryOnResults();
     }
   }, [isLoggedIn]);
 
-  // Effect to generate try-on images when recommended products and model image are available
+  // Effect to handle try-on generation
   useEffect(() => {
     if (recommendedProducts && modelImage && categoryId) {
       const categoryMap: { [key: string]: string } = {
@@ -121,7 +158,19 @@ const CategoryPage = () => {
         const garmentUrls = recommendedProducts[category as keyof RecommendedProducts].slice(0, 4);
         
         if (garmentUrls.length > 0) {
-          console.log("Starting generation for category:", category);
+          // Check for existing results first
+          console.log("Checking stored results for category:", categoryId);
+          const existingResults = getStoredTryOnResults(categoryId);
+          console.log("Existing results:", existingResults);
+          
+          if (existingResults) {
+            console.log("Using existing results for category:", categoryId);
+            setTryOnResults(existingResults);
+            setLoadingTryOns(false);
+            return;
+          }
+
+          console.log("No existing results found, starting generation for category:", category);
           setLoadingTryOns(true);
           const results: { [key: string]: string } = {};
 
@@ -129,6 +178,9 @@ const CategoryPage = () => {
           const processNextUrl = async (index: number) => {
             if (index >= garmentUrls.length) {
               setLoadingTryOns(false);
+              // Store results after all generations are complete
+              console.log("Generation complete, storing results for category:", categoryId);
+              storeTryOnResults(categoryId, results);
               return;
             }
 
@@ -136,7 +188,7 @@ const CategoryPage = () => {
             console.log("Processing URL:", garmentUrl);
             
             try {
-              const apiUrl = "https://a14b-34-55-132-208.ngrok-free.app/fashion-face-swap/";
+              const apiUrl = "https://035e-34-55-132-208.ngrok-free.app/fashion-face-swap/";
               
               // Map category to correct garment type
               const garmentTypeMap: { [key: string]: string } = {
@@ -198,7 +250,7 @@ const CategoryPage = () => {
         }
       }
     }
-  }, [recommendedProducts, modelImage, categoryId]); // Dependencies for the effect
+  }, [recommendedProducts, modelImage, categoryId]);
 
   const getRecommendedImages = () => {
     if (!recommendedProducts || !categoryId) return [];
