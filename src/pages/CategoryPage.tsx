@@ -174,79 +174,79 @@ const CategoryPage = () => {
           setLoadingTryOns(true);
           const results: { [key: string]: string } = {};
 
-          // Sequential processing with delay
-          const processNextUrl = async (index: number) => {
-            if (index >= garmentUrls.length) {
-              setLoadingTryOns(false);
-              // Store results after all generations are complete
-              console.log("Generation complete, storing results for category:", categoryId);
-              storeTryOnResults(categoryId, results);
-              return;
-            }
-
-            const garmentUrl = garmentUrls[index];
-            console.log("Processing URL:", garmentUrl);
-            
+          // Process all URLs in parallel
+          const processAllUrls = async () => {
             try {
-              const apiUrl = "https://035e-34-55-132-208.ngrok-free.app/fashion-face-swap/";
-              
-              // Map category to correct garment type
-              const garmentTypeMap: { [key: string]: string } = {
-                handbags: "handbags",
-                wallets: "wallet",
-                watches: "watch",
-                jewellery: "jewellery",
-                clothing: "clothing"
-              };
+              const promises = garmentUrls.map(async (garmentUrl) => {
+                console.log("Processing URL:", garmentUrl);
+                
+                try {
+                  const apiUrl = "https://6560-34-55-132-208.ngrok-free.app/fashion-face-swap/";
+                  
+                  // Map category to correct garment type
+                  const garmentTypeMap: { [key: string]: string } = {
+                    handbags: "handbags",
+                    wallets: "wallet",
+                    watches: "watch",
+                    jewellery: "jewellery",
+                    clothing: "clothing"
+                  };
 
-              const response = await fetch(apiUrl, {
-                method: "POST",
-                headers: {
-                  accept: "application/json",
-                  "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                  garment_url: garmentUrl,
-                  model_face_url: modelImage,
-                  garment_type: garmentTypeMap[categoryId] || categoryId
-                })
+                  const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: {
+                      accept: "application/json",
+                      "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                      garment_url: garmentUrl,
+                      model_face_url: modelImage,
+                      garment_type: garmentTypeMap[categoryId] || categoryId
+                    })
+                  });
+
+                  if (!response.ok) throw new Error("API request failed");
+
+                  const blob = await response.blob();
+                  // Convert blob to base64
+                  return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(blob);
+                    reader.onloadend = () => {
+                      const base64data = reader.result as string;
+                      resolve({ garmentUrl, base64data });
+                    };
+                  });
+                } catch (error) {
+                  console.error("Error generating try-on for", garmentUrl, ":", error);
+                  return { garmentUrl, base64data: "error" };
+                }
               });
 
-              if (!response.ok) throw new Error("API request failed");
-
-              const blob = await response.blob();
-              // Convert blob to base64
-              const reader = new FileReader();
-              reader.readAsDataURL(blob);
-              reader.onloadend = () => {
-                const base64data = reader.result as string;
-                results[garmentUrl] = base64data; // Store base64 data
-                
-                // Update state with current results
-                setTryOnResults({ ...results });
-
-                // Wait for 20 seconds before processing the next URL
-                setTimeout(() => {
-                  processNextUrl(index + 1);
-                }, 20000); // 20 seconds delay
-              };
-
-            } catch (error) {
-              console.error("Error generating try-on for", garmentUrl, ":", error);
-              results[garmentUrl] = "error"; // Indicate error for this URL
+              // Wait for all promises to resolve
+              const resultsArray = await Promise.all(promises) as Array<{ garmentUrl: string; base64data: string }>;
               
-              // Update state with current results
-              setTryOnResults({ ...results });
+              // Convert array of results to object
+              const newResults: { [key: string]: string } = resultsArray.reduce((acc, { garmentUrl, base64data }) => {
+                acc[garmentUrl] = base64data;
+                return acc;
+              }, {} as { [key: string]: string });
 
-              // Continue to the next URL even if there's an error
-              setTimeout(() => {
-                processNextUrl(index + 1);
-              }, 20000); // 20 seconds delay
+              // Update state with all results
+              setTryOnResults(newResults);
+              setLoadingTryOns(false);
+              
+              // Store results after all generations are complete
+              console.log("Generation complete, storing results for category:", categoryId);
+              storeTryOnResults(categoryId, newResults);
+            } catch (error) {
+              console.error("Error in parallel processing:", error);
+              setLoadingTryOns(false);
             }
           };
 
-          // Start processing the first URL
-          processNextUrl(0);
+          // Start processing all URLs
+          processAllUrls();
         }
       }
     }
@@ -287,36 +287,40 @@ const CategoryPage = () => {
             <div>
               <h2 className="text-2xl font-bold mb-6">Recommended for You</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {loadingTryOns ? (
-                  <div className="col-span-full text-center text-gray-600">Generating try-on images...</div>
-                ) : (
-                  recommendedImages.map((originalImageUrl, index) => (
-                    <div key={index} className="card-hover group cursor-pointer" onClick={() => setSelectedImage(tryOnResults[originalImageUrl] || originalImageUrl)}>
-                      <div className="relative overflow-hidden rounded-lg mb-4" style={{ width: '280px', height: '400px' }}>
-                        {tryOnResults[originalImageUrl] && tryOnResults[originalImageUrl] !== 'error' ? (
-                          <img
-                            src={tryOnResults[originalImageUrl]}
-                            alt={`Try-on result for ${categoryName} ${index + 1}`}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-                        ) : tryOnResults[originalImageUrl] === 'error' ? (
-                          <div className="w-full h-full flex items-center justify-center text-center text-gray-500 p-2">Failed to generate try-on</div>
-                        ) : (
+                {recommendedImages.map((originalImageUrl, index) => (
+                  <div key={index} className="card-hover group cursor-pointer" onClick={() => setSelectedImage(tryOnResults[originalImageUrl] || originalImageUrl)}>
+                    <div className="relative overflow-hidden rounded-lg mb-4" style={{ width: '280px', height: '400px' }}>
+                      {tryOnResults[originalImageUrl] && tryOnResults[originalImageUrl] !== 'error' ? (
+                        <img
+                          src={tryOnResults[originalImageUrl]}
+                          alt={`Try-on result for ${categoryName} ${index + 1}`}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="relative">
                           <img
                             src={originalImageUrl}
                             alt={`Recommended ${categoryName} ${index + 1}`}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
-                        )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-80 py-2 px-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                          <button className="w-full py-2 bg-katespade-pink text-white hover:bg-opacity-90">
-                            Add to Bag
-                          </button>
+                          {loadingTryOns && !tryOnResults[originalImageUrl] && (
+                            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                              <div className="text-white text-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                                <p>Generating try-on...</p>
+                              </div>
+                            </div>
+                          )}
                         </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-80 py-2 px-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                        <button className="w-full py-2 bg-katespade-pink text-white hover:bg-opacity-90">
+                          Add to Bag
+                        </button>
                       </div>
                     </div>
-                  ))
-                )}
+                  </div>
+                ))}
               </div>
             </div>
           ) : (
