@@ -4,6 +4,8 @@ interface ProfileResponse {
   dob?: string;
   gender?: string;
   profile_picture?: string;
+  skin_tone?: string;
+  country?: string;
   recommended_products?: {
     wallet?: string[];
     jewellery?: string[];

@@ -181,7 +181,7 @@ const CategoryPage = () => {
                 console.log("Processing URL:", garmentUrl);
                 
                 try {
-                  const apiUrl = "https://7f86-34-55-132-208.ngrok-free.app/fashion-face-swap/";
+                  const apiUrl = "https://6d40-34-55-132-208.ngrok-free.app/fashion-face-swap/";
                   
                   // Map category to correct garment type
                   const garmentTypeMap: { [key: string]: string } = {

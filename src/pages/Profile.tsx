@@ -18,16 +18,22 @@ const Profile = () => {
     dob: string | null;
     gender: string | null;
     profile_picture?: string | null;
+    skin_tone?: string | null;
+    country?: string | null;
   }>({
     email: undefined,
     dob: null,
     gender: null,
     profile_picture: null,
+    skin_tone: null,
+    country: null,
   });
 
   const [inputDob, setInputDob] = useState("");
   const [inputGender, setInputGender] = useState("");
   const [inputProfilePicture, setInputProfilePicture] = useState("");
+  const [inputSkinTone, setInputSkinTone] = useState("");
+  const [inputCountry, setInputCountry] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -48,7 +54,9 @@ const Profile = () => {
             email: parsedProfile.email,
             dob: parsedProfile.dob,
             gender: parsedProfile.gender,
-            profile_picture: parsedProfile.profile_picture
+            profile_picture: parsedProfile.profile_picture,
+            skin_tone: parsedProfile.skin_tone,
+            country: parsedProfile.country
           });
           
           // Pre-fill the form fields if we have data
@@ -61,16 +69,24 @@ const Profile = () => {
           if (parsedProfile.profile_picture) {
             setInputProfilePicture(parsedProfile.profile_picture);
           }
+          if (parsedProfile.skin_tone) {
+            setInputSkinTone(parsedProfile.skin_tone);
+          }
+          if (parsedProfile.country) {
+            setInputCountry(parsedProfile.country);
+          }
         } else {
           // If no cached profile, try to fetch from API
           try {
             const fetchedProfile = await fetchUserProfile(token);
-            if (fetchedProfile.dob || fetchedProfile.gender || fetchedProfile.profile_picture) {
+            if (fetchedProfile.dob || fetchedProfile.gender || fetchedProfile.profile_picture || fetchedProfile.skin_tone || fetchedProfile.country) {
               setProfile({
                 email: fetchedProfile.email || undefined,
                 dob: fetchedProfile.dob || null,
                 gender: fetchedProfile.gender || null,
-                profile_picture: fetchedProfile.profile_picture || null
+                profile_picture: fetchedProfile.profile_picture || null,
+                skin_tone: fetchedProfile.skin_tone || null,
+                country: fetchedProfile.country || null
               });
               
               // Store profile data in localStorage
@@ -86,10 +102,15 @@ const Profile = () => {
               if (fetchedProfile.profile_picture) {
                 setInputProfilePicture(fetchedProfile.profile_picture);
               }
+              if (fetchedProfile.skin_tone) {
+                setInputSkinTone(fetchedProfile.skin_tone);
+              }
+              if (fetchedProfile.country) {
+                setInputCountry(fetchedProfile.country);
+              }
             }
           } catch (error) {
             console.error("Error fetching profile from API:", error);
-            // If API call fails, we continue without the profile data
           }
         }
       } catch (error) {
@@ -115,6 +136,16 @@ const Profile = () => {
       return;
     }
 
+    if (!inputSkinTone) {
+      toast.error("Skin tone is required");
+      return;
+    }
+
+    if (!inputCountry) {
+      toast.error("Country is required");
+      return;
+    }
+
     const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
@@ -132,7 +163,9 @@ const Profile = () => {
         body: JSON.stringify({
           dob: inputDob,
           gender: inputGender,
-          profile_picture: inputProfilePicture
+          profile_picture: inputProfilePicture,
+          skin_tone: inputSkinTone,
+          country: inputCountry
         }),
       });
 
@@ -147,14 +180,29 @@ const Profile = () => {
         ...profile,
         dob: data.dob,
         gender: data.gender,
-        profile_picture: data.profile_picture
+        profile_picture: data.profile_picture,
+        skin_tone: data.skin_tone,
+        country: data.country
       });
 
       // Update localStorage cache
       const existingProfile = localStorage.getItem("userProfile");
       const updatedProfile = existingProfile 
-        ? { ...JSON.parse(existingProfile), dob: data.dob, gender: data.gender, profile_picture: data.profile_picture }
-        : { dob: data.dob, gender: data.gender, profile_picture: data.profile_picture };
+        ? { 
+            ...JSON.parse(existingProfile), 
+            dob: data.dob, 
+            gender: data.gender, 
+            profile_picture: data.profile_picture,
+            skin_tone: data.skin_tone,
+            country: data.country
+          }
+        : { 
+            dob: data.dob, 
+            gender: data.gender, 
+            profile_picture: data.profile_picture,
+            skin_tone: data.skin_tone,
+            country: data.country
+          };
       
       localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
 
@@ -230,7 +278,7 @@ const Profile = () => {
             <h1 className="text-3xl font-bold mb-2">My Profile</h1>
             <p className="text-gray-600 mb-8">Update your personal information</p>
             
-            {(profile.email || profile.dob || profile.gender || profile.profile_picture) ? (
+            {(profile.email || profile.dob || profile.gender || profile.profile_picture || profile.skin_tone || profile.country) ? (
               <div className="mb-8 bg-white rounded-lg shadow p-6">
                 <h2 className="text-xl font-medium mb-4">Current Profile</h2>
                 <div className="space-y-3">
@@ -256,6 +304,14 @@ const Profile = () => {
                   <div className="flex">
                     <span className="font-medium w-32">Gender:</span>
                     <span>{profile.gender ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1) : "Not set"}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="font-medium w-32">Skin Tone:</span>
+                    <span>{profile.skin_tone || "Not set"}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="font-medium w-32">Country:</span>
+                    <span>{profile.country || "Not set"}</span>
                   </div>
                 </div>
               </div>
@@ -295,6 +351,36 @@ const Profile = () => {
                           <SelectItem value="prefer not to say">Prefer not to say</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="skin_tone" className="block text-sm font-medium mb-2">
+                        Skin Tone
+                      </label>
+                      <Input
+                        id="skin_tone"
+                        type="text"
+                        value={inputSkinTone}
+                        onChange={(e) => setInputSkinTone(e.target.value)}
+                        placeholder="Enter your skin tone"
+                        required
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="country" className="block text-sm font-medium mb-2">
+                        Country
+                      </label>
+                      <Input
+                        id="country"
+                        type="text"
+                        value={inputCountry}
+                        onChange={(e) => setInputCountry(e.target.value)}
+                        placeholder="Enter your country"
+                        required
+                        className="w-full"
+                      />
                     </div>
 
                     <div>
