@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { toast } from "sonner"; // Import toast for notifications
@@ -56,6 +56,13 @@ const CategoryPage = () => {
   const [tryOnResults, setTryOnResults] = useState<{ [key: string]: string }>({});
   const [loadingTryOns, setLoadingTryOns] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [clothingImages, setClothingImages] = useState<string[] | null>(null);
+  const [loadingClothingImages, setLoadingClothingImages] = useState(false);
+  const [showClothingFallback, setShowClothingFallback] = useState(true);
+  const [faceSwapResults, setFaceSwapResults] = useState<{ [url: string]: string | null }>({});
+  const [faceSwapLoading, setFaceSwapLoading] = useState<{ [url: string]: boolean }>({});
+  // Remove faceSwapTriggered, use modelImage as trigger
+  const lastFaceSwapModelImage = useRef<string | null>(null);
 
   // Function to store try-on results with timestamp
   const storeTryOnResults = (category: string, results: { [key: string]: string }) => {
@@ -177,11 +184,26 @@ const CategoryPage = () => {
           // Process all URLs in parallel
           const processAllUrls = async () => {
             try {
+              // Get user profile data
+              const userProfile = localStorage.getItem("userProfile");
+              if (!userProfile) {
+                console.error("User profile not found");
+                setLoadingTryOns(false);
+                return;
+              }
+
+              const profile = JSON.parse(userProfile);
+              if (!profile.dob || !profile.skin_tone || !profile.country) {
+                console.error("Incomplete profile information");
+                setLoadingTryOns(false);
+                return;
+              }
+
               const promises = garmentUrls.map(async (garmentUrl) => {
                 console.log("Processing URL:", garmentUrl);
                 
                 try {
-                  const apiUrl = "https://6d40-34-55-132-208.ngrok-free.app/fashion-face-swap/";
+                  const apiUrl = "https://01e4-34-55-132-208.ngrok-free.app/fashion-face-swap/";
                   
                   // Map category to correct garment type
                   const garmentTypeMap: { [key: string]: string } = {
@@ -201,7 +223,10 @@ const CategoryPage = () => {
                     body: JSON.stringify({
                       garment_url: garmentUrl,
                       model_face_url: modelImage,
-                      garment_type: garmentTypeMap[categoryId] || categoryId
+                      garment_type: garmentTypeMap[categoryId] || categoryId,
+                      dob: profile.dob,
+                      skin_tone: profile.skin_tone,
+                      country: profile.country
                     })
                   });
 
@@ -252,9 +277,107 @@ const CategoryPage = () => {
     }
   }, [recommendedProducts, modelImage, categoryId]);
 
+  // Call face-swap API as soon as user signs in and has a profile picture
+  useEffect(() => {
+    if (modelImage && lastFaceSwapModelImage.current !== modelImage) {
+      lastFaceSwapModelImage.current = modelImage;
+      const urls = [
+        "https://katespade.scene7.com/is/image/KateSpade/KL713_651?$desktopProduct$",
+        "https://katespade.scene7.com/is/image/KateSpade/KL702_001?$desktopProduct$",
+        "https://katespade.scene7.com/is/image/KateSpade/KM077_403?$desktopProduct$"
+      ];
+      setFaceSwapResults({});
+      setFaceSwapLoading({});
+      urls.forEach((garmentUrl) => {
+        setFaceSwapLoading(prev => ({ ...prev, [garmentUrl]: true }));
+        fetch("https://7c3fc27c8f16.ngrok-free.app/fashion-face-swap/", {
+          method: "POST",
+          headers: {
+            accept: "application/json",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            garment_url: garmentUrl,
+            model_face_url: modelImage,
+            garment_type: "clothing"
+          })
+        })
+          .then(async (res) => {
+            if (!res.ok) throw new Error("Face-swap API failed");
+            const blob = await res.blob();
+            return new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(blob);
+              reader.onloadend = () => {
+                resolve(reader.result as string);
+              };
+            });
+          })
+          .then((base64data) => {
+            setFaceSwapResults(prev => ({ ...prev, [garmentUrl]: base64data }));
+            setFaceSwapLoading(prev => ({ ...prev, [garmentUrl]: false }));
+          })
+          .catch(() => {
+            setFaceSwapResults(prev => ({ ...prev, [garmentUrl]: null }));
+            setFaceSwapLoading(prev => ({ ...prev, [garmentUrl]: false }));
+          });
+      });
+    }
+  }, [modelImage]);
+
+  // Only fetch for clothing tab (get-images API)
+  useEffect(() => {
+    if (categoryId === "clothing") {
+      setShowClothingFallback(true);
+      setLoadingClothingImages(true);
+      const urls = [
+        "https://katespade.scene7.com/is/image/KateSpade/KL713_651?$desktopProduct$",
+        "https://katespade.scene7.com/is/image/KateSpade/KL702_001?$desktopProduct$",
+        "https://katespade.scene7.com/is/image/KateSpade/KM077_403?$desktopProduct$"
+      ];
+      const apiUrl = `http://127.0.0.1:5000/get-images/?url1=${encodeURIComponent(urls[0])}&url2=${encodeURIComponent(urls[1])}&url3=${encodeURIComponent(urls[2])}`;
+      fetch(apiUrl, { headers: { accept: "application/json" } })
+        .then(res => res.json())
+        .then(data => {
+          setTimeout(() => {
+            setClothingImages([data.image1, data.image2, data.image3]);
+            setShowClothingFallback(false);
+            setLoadingClothingImages(false);
+          }, 500); // Show fallback for 500ms
+        })
+        .catch(() => {
+          setClothingImages(null);
+          setShowClothingFallback(false);
+          setLoadingClothingImages(false);
+        });
+    } else {
+      setClothingImages(null);
+      setShowClothingFallback(true);
+      setLoadingClothingImages(false);
+    }
+  }, [categoryId]);
+
   const getRecommendedImages = () => {
-    if (!recommendedProducts || !categoryId) return [];
-    
+    if (!categoryId) return [];
+    // For clothing tab, use fallback for a short time, then API images
+    if (categoryId === "clothing") {
+      if (showClothingFallback) {
+        return [
+          "https://katespade.scene7.com/is/image/KateSpade/KL713_651?$desktopProduct$",
+          "https://katespade.scene7.com/is/image/KateSpade/KL702_001?$desktopProduct$",
+          "https://katespade.scene7.com/is/image/KateSpade/KM077_403?$desktopProduct$"
+        ];
+      }
+      if (loadingClothingImages && !clothingImages) return ["loading", "loading", "loading"];
+      if (clothingImages) return clothingImages;
+      // fallback to hardcoded URLs if fetch failed
+      return [
+        "https://katespade.scene7.com/is/image/KateSpade/KL713_651?$desktopProduct$",
+        "https://katespade.scene7.com/is/image/KateSpade/KL702_001?$desktopProduct$",
+        "https://katespade.scene7.com/is/image/KateSpade/KM077_403?$desktopProduct$"
+      ];
+    }
+    if (!recommendedProducts) return [];
     const categoryMap: { [key: string]: string } = {
       handbags: "handbag",
       wallets: "wallet",
@@ -262,11 +385,8 @@ const CategoryPage = () => {
       jewellery: "jewellery",
       clothing: "clothing"
     };
-    
     const category = categoryMap[categoryId];
     if (!category || !recommendedProducts[category as keyof RecommendedProducts]) return [];
-    
-    // Return original URLs, try-on results will be looked up during rendering
     return recommendedProducts[category as keyof RecommendedProducts].slice(0, 4);
   };
 
@@ -288,30 +408,36 @@ const CategoryPage = () => {
               <h2 className="text-2xl font-bold mb-6">Recommended for You</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {recommendedImages.map((originalImageUrl, index) => (
-                  <div key={index} className="card-hover group cursor-pointer" onClick={() => setSelectedImage(tryOnResults[originalImageUrl] || originalImageUrl)}>
-                    <div className="relative overflow-hidden rounded-lg mb-4" style={{ width: '280px', height: '400px' }}>
-                      {tryOnResults[originalImageUrl] && tryOnResults[originalImageUrl] !== 'error' ? (
+                  <div key={index} className="card-hover group cursor-pointer" onClick={() => {
+                    // For clothing tab, always set selectedImage to the original clothing URL
+                    if (categoryId === 'clothing') {
+                      const clothingUrls = [
+                        "https://katespade.scene7.com/is/image/KateSpade/KL713_651?$desktopProduct$",
+                        "https://katespade.scene7.com/is/image/KateSpade/KL702_001?$desktopProduct$",
+                        "https://katespade.scene7.com/is/image/KateSpade/KM077_403?$desktopProduct$"
+                      ];
+                      setSelectedImage(clothingUrls[index]);
+                    } else {
+                      setSelectedImage(originalImageUrl);
+                    }
+                  }}>
+                    <div
+                      className="relative overflow-hidden rounded-lg mb-4"
+                      style={categoryId === 'clothing'
+                        ? { width: '180px', height: '260px' }
+                        : { width: '280px', height: '400px' }}
+                    >
+                      {originalImageUrl === "loading" ? (
+                        <div className="flex items-center justify-center w-full h-full bg-gray-200">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600 mx-auto mb-2"></div>
+                          <p>Loading...</p>
+                        </div>
+                      ) : (
                         <img
-                          src={tryOnResults[originalImageUrl]}
-                          alt={`Try-on result for ${categoryName} ${index + 1}`}
+                          src={originalImageUrl}
+                          alt={`Recommended ${categoryName} ${index + 1}`}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
-                      ) : (
-                        <div className="relative">
-                          <img
-                            src={originalImageUrl}
-                            alt={`Recommended ${categoryName} ${index + 1}`}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-                          {loadingTryOns && !tryOnResults[originalImageUrl] && (
-                            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                              <div className="text-white text-center">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-                                <p>Generating try-on...</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
                       )}
                       <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-80 py-2 px-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
                         <button className="w-full py-2 bg-katespade-pink text-white hover:bg-opacity-90">
@@ -365,7 +491,21 @@ const CategoryPage = () => {
           onClick={() => setSelectedImage(null)}
         >
           <div className="relative" onClick={(e) => e.stopPropagation()}>
-            <img src={selectedImage} alt="Enlarged product view" className="max-w-screen-lg max-h-screen-lg object-contain" />
+            {/* If in clothing tab and face-swap result exists for this card, show it. Else, show loading or fallback */}
+            {categoryId === 'clothing' && selectedImage && faceSwapResults[selectedImage] !== undefined ? (
+              faceSwapResults[selectedImage] ? (
+                <img src={faceSwapResults[selectedImage]!} alt="Face-swap view" className="max-w-screen-lg max-h-screen-lg object-contain" />
+              ) : faceSwapLoading[selectedImage] ? (
+                <div className="flex flex-col items-center justify-center w-[180px] h-[260px] bg-gray-200">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600 mx-auto mb-2"></div>
+                  <p>Generating try-on...</p>
+                </div>
+              ) : (
+                <img src={selectedImage} alt="Fallback product view" className="max-w-screen-lg max-h-screen-lg object-contain" />
+              )
+            ) : (
+              <img src={selectedImage} alt="Enlarged product view" className="max-w-screen-lg max-h-screen-lg object-contain" />
+            )}
             <button
               className="absolute top-2 right-2 text-white text-2xl font-bold"
               onClick={() => setSelectedImage(null)}

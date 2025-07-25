@@ -31,6 +31,19 @@ const VirtualTryOn = () => {
       return;
     }
 
+    // Get user profile data
+    const userProfile = localStorage.getItem("userProfile");
+    if (!userProfile) {
+      toast.error("Please complete your profile first");
+      return;
+    }
+
+    const profile = JSON.parse(userProfile);
+    if (!profile.dob || !profile.skin_tone || !profile.country) {
+      toast.error("Please complete your profile information (DOB, skin tone, and country)");
+      return;
+    }
+
     setLoading(true);
     setResultImage(null);
     try {
@@ -43,7 +56,10 @@ const VirtualTryOn = () => {
         },
         body: JSON.stringify({
           garment_url: garmentImage,
-          model_face_url: modelImage
+          model_face_url: modelImage,
+          dob: profile.dob,
+          skin_tone: profile.skin_tone,
+          country: profile.country
         })
       });
       if (!response.ok) throw new Error("API request failed");
